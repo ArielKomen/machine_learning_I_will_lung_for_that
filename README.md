@@ -1,1 +1,2 @@
-# machine_learning_I_will_lung_for_that
+I lung for data~
+This is also a repo to deposit code for the image analysis final assignment
