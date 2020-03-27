@@ -1,10 +1,7 @@
 #image analysis eind opdracht code 
 import numpy as np
 import pandas as pd
-<<<<<<< HEAD
-from argparse import ArgumentParser
-=======
->>>>>>> ef305cb1714101dc96aeb5160cf76692aace1cef
+import argparse
 from keras.callbacks import EarlyStopping
 from keras.callbacks import TensorBoard
 from keras.layers import Dense, Activation, Flatten, Dropout
@@ -18,6 +15,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 def main():
+    get_arguments()
+    
     batch_size = 100
     nb_classes = 15
     nb_epoch = 20
@@ -27,25 +26,39 @@ def main():
     nb_filters = 32
     kernel_size = (2, 2)
    
-    labels, disease_X_images = import_data()
-    fitted_labels = encode_labels(labels)
-    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, test_data_size)
+##    labels, disease_X_images = import_data()
+##    fitted_labels = encode_labels(labels)
+##    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, test_data_size)
+##    
+##    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, img_rows, img_cols, channels)
+##    input_shape = get_input_shape(img_rows, img_cols, channels)
+##
+##    disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array)
+##    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array)
+##
+##    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch, batch_size, nb_classes, nb_gpus)
+##
+##    disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
+##    precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
+##    print_results(precision, recall, f1)
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("batch_size", help="batch size for the model[default=100]")
+    parser.add_argument("nb_classes", help="total number of classes the test data has[default=15]")
+    parser.add_argument("np_epochs", help="the total number of epochs used[default=20]")
+    parser.add_argument("nb_gpus", help="the number of gpus used in this run[default=8]")
+    parser.add_argument("img_rows", help="each image will be, unless already, trimmed to this number of rows[default=512]")
+    parser.add_argument("img_collums", help="each image will be, unless already, trimmed to this number of collums[default=512]")
+    parser.add_argument("channels", help="Specify if the image is grayscale (1) or RGB (3)")
+    parser.add_argument("nb_filters", help="the total number of filters[default=32]")
+    parser.add_argument("kernel_size", help="initial size of the kernel[default=(2, 2)]")
+    parser.parse_args()
+
+
+
+
+
     
-    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, img_rows, img_cols, channels)
-    input_shape = get_input_shape(img_rows, img_cols, channels)
-
-    disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array)
-    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array)
-
-    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch, batch_size, nb_classes, nb_gpus)
-
-
-
-
-    disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
-    precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
-    print_results(precision, recall, f1)
-
 def import_data():
     """
     import the data.
@@ -53,11 +66,8 @@ def import_data():
     Labels contains per image a label noting what the disease is.
     Returns a numpy array of images containing the disease and the associated labels. 
     """
-<<<<<<< HEAD
-    disease_X_images = np.load("../data/train/effusion_train_images/X_sample.npy")
-=======
+
     disease_X_images = np.load("../data/X_sample.npy")
->>>>>>> ef305cb1714101dc96aeb5160cf76692aace1cef
     labels = pd.read_csv("../data/sample_labels.csv")
     return labels, disease_X_images
 
