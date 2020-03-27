@@ -1,7 +1,10 @@
 #image analysis eind opdracht code 
 import numpy as np
 import pandas as pd
+<<<<<<< HEAD
 from argparse import ArgumentParser
+=======
+>>>>>>> ef305cb1714101dc96aeb5160cf76692aace1cef
 from keras.callbacks import EarlyStopping
 from keras.callbacks import TensorBoard
 from keras.layers import Dense, Activation, Flatten, Dropout
@@ -50,7 +53,11 @@ def import_data():
     Labels contains per image a label noting what the disease is.
     Returns a numpy array of images containing the disease and the associated labels. 
     """
+<<<<<<< HEAD
     disease_X_images = np.load("../data/train/effusion_train_images/X_sample.npy")
+=======
+    disease_X_images = np.load("../data/X_sample.npy")
+>>>>>>> ef305cb1714101dc96aeb5160cf76692aace1cef
     labels = pd.read_csv("../data/sample_labels.csv")
     return labels, disease_X_images
 
