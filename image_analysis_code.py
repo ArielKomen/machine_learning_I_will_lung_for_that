@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 def main():
-    get_arguments()
+    arguments = get_user_arguments()
     
     batch_size = 100
     nb_classes = 15
@@ -41,23 +41,20 @@ def main():
 ##    disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
 ##    precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
 ##    print_results(precision, recall, f1)
-def get_arguments():
+def get_user_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("batch_size", help="batch size for the model[default=100]")
-    parser.add_argument("nb_classes", help="total number of classes the test data has[default=15]")
-    parser.add_argument("np_epochs", help="the total number of epochs used[default=20]")
-    parser.add_argument("nb_gpus", help="the number of gpus used in this run[default=8]")
-    parser.add_argument("img_rows", help="each image will be, unless already, trimmed to this number of rows[default=512]")
-    parser.add_argument("img_collums", help="each image will be, unless already, trimmed to this number of collums[default=512]")
-    parser.add_argument("channels", help="Specify if the image is grayscale (1) or RGB (3)")
-    parser.add_argument("nb_filters", help="the total number of filters[default=32]")
-    parser.add_argument("kernel_size", help="initial size of the kernel[default=(2, 2)]")
-    parser.parse_args()
-
-
-
-
-
+    parser.add_argument("-b","--batch_size", help="batch size for the model[default=100]", type=int, default=100)
+    parser.add_argument("-a","--nb_classes", help="total number of classes the test data has[default=15]", type=int, default=15)
+    parser.add_argument("-e","--nb_epochs", help="the total number of epochs used[default=20]", type=int, default=20)
+    parser.add_argument("-gpu","--use_GPU", help="if you're able to use a GPU, select this option and the program will run much quicker", action="store_true", default=False)
+    parser.add_argument("-g","--nb_gpus", help="the number of gpus used in this run(if -gpu or --use_gpu is selected)[default=8]", type=int, default=8)
+    parser.add_argument("-r","--img_rows", help="each image will be, unless already, trimmed to this number of rows[default=512]", type=int, default=512)
+    parser.add_argument("-c","--img_collums", help="each image will be, unless already, trimmed to this number of collums[default=512]", type=int, default=512)
+    parser.add_argument("-d","--channels", help="Specify if the image is grayscale (1) or RGB (3)[default=1]", type=int, choices=[1,2,3], default=1)
+    parser.add_argument("-f","--nb_filters", help="the total number of filters[default=32]", type=int, default=32)
+    parser.add_argument("-k","--kernel_size", help="initial size of the kernel[default=(2, 2)]", type=tuple, default=(2, 2))
+    arguments = parser.parse_args()
+    return arguments
     
 def import_data():
     """
