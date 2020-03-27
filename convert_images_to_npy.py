@@ -1,4 +1,5 @@
-#code I stole from the internet to convert the input images to .npy arrays. 
+#code I(Ariel) stole from the internet to convert the input images to .npy arrays.
+#I should not though that it was a mess, so I fixed most of the problems, the only thing you should change are the file pathes in theory. 
 import glob
 import numpy as np
 import cv2
