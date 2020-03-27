@@ -16,36 +16,37 @@ from sklearn.preprocessing import LabelEncoder
 
 def main():
     arguments = get_user_arguments()
+    #Namespace(batch_size=100, channels=1, img_collums=512, img_rows=512, kernel_size=(2, 2), nb_classes=15, nb_epochs=20, nb_filters=32, nb_gpus=8, test_data_size=0.2, use_GPU=False)
+
+    labels, disease_X_images = import_data()
+    fitted_labels = encode_labels(labels)
+    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, arguments.test_data_size)
     
-    batch_size = 100
-    nb_classes = 15
-    nb_epoch = 20
-    nb_gpus = 8
-    img_rows, img_cols = 512, 512
-    channels = 1
-    nb_filters = 32
-    kernel_size = (2, 2)
-   
-##    labels, disease_X_images = import_data()
-##    fitted_labels = encode_labels(labels)
-##    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, test_data_size)
-##    
-##    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, img_rows, img_cols, channels)
-##    input_shape = get_input_shape(img_rows, img_cols, channels)
-##
-##    disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array)
-##    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array)
-##
-##    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch, batch_size, nb_classes, nb_gpus)
-##
-##    disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
-##    precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
-##    print_results(precision, recall, f1)
+    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, arguments.img_rows, arguments.img_cols, arguments.channels)
+    input_shape = get_input_shape(arguments.img_rows, arguments.img_cols, arguments.channels)
+
+    disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array)
+    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array)
+
+    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, arguments.nb_filters, arguments.channels, arguments.nb_epoch, arguments.batch_size, arguments.nb_classes, arguments.nb_gpus)
+
+    disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
+    precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
+    print_results(precision, recall, f1)
+    
 def get_user_arguments():
+    """
+    Initialize a ArgumentParset object and add all the possible arguments.
+    input:
+         -
+    output:
+         arguments: ArgumentParset object holding the chosen values of the user or the default values. 
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("-b","--batch_size", help="batch size for the model[default=100]", type=int, default=100)
     parser.add_argument("-a","--nb_classes", help="total number of classes the test data has[default=15]", type=int, default=15)
     parser.add_argument("-e","--nb_epochs", help="the total number of epochs used[default=20]", type=int, default=20)
+    parser.add_argument("-s", "--test_data_size", help="how much data should be used as test data?[default=0.2]", type=float, default=0.2)
     parser.add_argument("-gpu","--use_GPU", help="if you're able to use a GPU, select this option and the program will run much quicker", action="store_true", default=False)
     parser.add_argument("-g","--nb_gpus", help="the number of gpus used in this run(if -gpu or --use_gpu is selected)[default=8]", type=int, default=8)
     parser.add_argument("-r","--img_rows", help="each image will be, unless already, trimmed to this number of rows[default=512]", type=int, default=512)
