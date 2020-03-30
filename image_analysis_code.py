@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import argparse
+import ast
 from keras.callbacks import EarlyStopping
 from keras.callbacks import TensorBoard
 from keras.layers import Dense, Activation, Flatten, Dropout
@@ -16,19 +17,21 @@ from sklearn.preprocessing import LabelEncoder
 
 def main():
     arguments = get_user_arguments()
-    #Namespace(batch_size=100, channels=1, img_collums=512, img_rows=512, kernel_size=(2, 2), nb_classes=15, nb_epochs=20, nb_filters=32, nb_gpus=8, test_data_size=0.2, use_GPU=False)
-
+    """
+    default arguments are: batch_size=100, channels=1, img_collums=256, img_rows=256, kernel_size=(2, 2),
+    nb_classes=15, nb_epochs=20, nb_filters=32, nb_gpus=8, test_data_size=0.2, use_GPU=False.
+    """
+    
     labels, disease_X_images = import_data()
     fitted_labels = encode_labels(labels)
-    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, arguments.test_data_size)
     
-    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, arguments.img_rows, arguments.img_cols, arguments.channels)
-    input_shape = get_input_shape(arguments.img_rows, arguments.img_cols, arguments.channels)
-
+    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, arguments.test_data_size)
+    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, arguments.img_rows, arguments.img_collums, arguments.channels)
     disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array)
     disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array)
 
-    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, arguments.nb_filters, arguments.channels, arguments.nb_epoch, arguments.batch_size, arguments.nb_classes, arguments.nb_gpus)
+    input_shape = get_input_shape(arguments.img_rows, arguments.img_collums, arguments.channels)
+    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, arguments.nb_filters, arguments.channels, arguments.nb_epoch, arguments.batch_size, arguments.nb_classes, arguments.nb_gpus, input_shape)
 
     disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
     precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
@@ -40,23 +43,23 @@ def get_user_arguments():
     input:
          -
     output:
-         arguments: ArgumentParset object holding the chosen values of the user or the default values. 
+         arguments: ArgumentParset object containg the user defined variables or the default values. 
     """
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="analyze lung images, the input data is created using another script")
     parser.add_argument("-b","--batch_size", help="batch size for the model[default=100]", type=int, default=100)
     parser.add_argument("-a","--nb_classes", help="total number of classes the test data has[default=15]", type=int, default=15)
     parser.add_argument("-e","--nb_epochs", help="the total number of epochs used[default=20]", type=int, default=20)
     parser.add_argument("-s", "--test_data_size", help="how much data should be used as test data?[default=0.2]", type=float, default=0.2)
     parser.add_argument("-gpu","--use_GPU", help="if you're able to use a GPU, select this option and the program will run much quicker", action="store_true", default=False)
     parser.add_argument("-g","--nb_gpus", help="the number of gpus used in this run(if -gpu or --use_gpu is selected)[default=8]", type=int, default=8)
-    parser.add_argument("-r","--img_rows", help="each image will be, unless already, trimmed to this number of rows[default=512]", type=int, default=512)
-    parser.add_argument("-c","--img_collums", help="each image will be, unless already, trimmed to this number of collums[default=512]", type=int, default=512)
+    parser.add_argument("-r","--img_rows", help="each image will be, unless already, trimmed to this number of rows[default=256]", type=int, default=256)
+    parser.add_argument("-c","--img_collums", help="each image will be, unless already, trimmed to this number of collums[default=256]", type=int, default=256)
     parser.add_argument("-d","--channels", help="Specify if the image is grayscale (1) or RGB (3)[default=1]", type=int, choices=[1,2,3], default=1)
     parser.add_argument("-f","--nb_filters", help="the total number of filters[default=32]", type=int, default=32)
-    parser.add_argument("-k","--kernel_size", help="initial size of the kernel[default=(2, 2)]", type=tuple, default=(2, 2))
+    parser.add_argument("-k","--kernel_size", help="initial size of the kernel[default=(2 2)]", type=tuple, nargs=2, default=(2, 2))
     arguments = parser.parse_args()
     return arguments
-    
+
 def import_data():
     """
     import the data.
@@ -113,7 +116,7 @@ def reshape_data(disease_X_train_array, disease_X_test_array, img_rows, img_cols
     """
     print("Reshaping Data")
     disease_X_train_reshaped_array = disease_X_train_array.reshape(disease_X_train_array.shape[0], img_rows, img_cols, channels)
-    disease_X_test_reshaped_array = X_test.reshape(X_test.shape[0], img_rows, img_cols, channels)
+    disease_X_test_reshaped_array = disease_X_test_array.reshape(disease_X_test_array.shape[0], img_rows, img_cols, channels)
 
     print("X_train Shape: ", disease_X_train_reshaped_array.shape)
     print("X_test Shape: ", disease_X_test_reshaped_array.shape)
@@ -214,9 +217,6 @@ def add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size):
     """
     Add to the model convolving and ReLU layers.
     First set of three layers
-    Image size: 256 x 256
-    nb_filters = 32
-    kernel_size = (2,2)
     input:
          model      : a Sequential model
          nb_filters : total amount of filters. 
