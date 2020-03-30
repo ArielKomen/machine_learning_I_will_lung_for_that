@@ -36,7 +36,7 @@ def main():
     
 def get_user_arguments():
     """
-    Initialize a ArgumentParset object and add all the possible arguments.
+    Initialize a ArgumentParset object and add all the user definable arguments.
     input:
          -
     output:
@@ -65,8 +65,8 @@ def import_data():
     Returns a numpy array of images containing the disease and the associated labels. 
     """
 
-    disease_X_images = np.load("../data/X_sample.npy")
-    labels = pd.read_csv("../data/sample_labels.csv")
+    disease_X_images = np.load("data/X_sample.npy")
+    labels = pd.read_csv("data/sample_labels.csv")
     return labels, disease_X_images
 
 def encode_labels(labels):
