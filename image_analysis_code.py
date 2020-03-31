@@ -202,8 +202,8 @@ def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kerne
     """
     model = get_model()
     model = add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size)
-    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*2, kernel_size=[i * 2 for i in kernel_size])#(4, 4))
-    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*4, kernel_size=[i * 4 for i in kernel_size])#(8, 8))
+    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*2, kernel_size=[i * 2 for i in kernel_size])#default should change to:(4, 4))
+    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*4, kernel_size=[i * 4 for i in kernel_size])#default should change to:(8, 8))
     model = flatten_and_add_dropout_layers_to_model(model)
     model = compile_model(model, nb_gpus, use_GPU)
     print(model.summary())
