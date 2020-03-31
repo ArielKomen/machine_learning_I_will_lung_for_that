@@ -16,47 +16,48 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 def main():
-    arguments = get_user_arguments()
-    """
-    default arguments are: batch_size=100, channels=1, img_collums=256, img_rows=256, kernel_size=(2, 2),
-    nb_classes=15, nb_epochs=20, nb_filters=32, nb_gpus=8, test_data_size=0.2, use_GPU=False.
-    """
-    
     labels, disease_X_images = import_data()
     fitted_labels = encode_labels(labels)
+    arguments = get_user_arguments(image_amount=len(disease_X_images))
+    """
+    default arguments are:batch_size=100, channels=1, img_collums=256, img_rows=256, kernel_size=(2, 2),
+    nb_classes=15, nb_epochs=20, nb_filters=32, nb_gpus=8, test_data_size=0.2, use_GPU=False.
+    """
     
     disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, arguments.test_data_size)
     disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, arguments.img_rows, arguments.img_collums, arguments.channels)
     disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array)
-    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array)
+    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array, arguments.nb_classes)
 
     input_shape = get_input_shape(arguments.img_rows, arguments.img_collums, arguments.channels)
-    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, arguments.nb_filters, arguments.channels, arguments.nb_epoch, arguments.batch_size, arguments.nb_classes, arguments.nb_gpus, input_shape)
+    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, arguments.nb_filters, arguments.channels,
+                         arguments.nb_epoch, arguments.batch_size, arguments.nb_gpus, arguments.use_GPU, input_shape)
 
     disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
     precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
     print_results(precision, recall, f1)
     
-def get_user_arguments():
+def get_user_arguments(image_amount):
     """
     Initialize a ArgumentParset object and add all the user definable arguments.
     input:
-         -
+         image_amount: int, the total amount of images 
     output:
          arguments: ArgumentParset object containg the user defined variables or the default values. 
     """
     parser = argparse.ArgumentParser(description="analyze lung images, the input data is created using another script")
-    parser.add_argument("-b","--batch_size", help="batch size for the model[default=100]", type=int, default=100)
-    parser.add_argument("-a","--nb_classes", help="total number of classes the test data has[default=15]", type=int, default=15)
-    parser.add_argument("-e","--nb_epochs", help="the total number of epochs used[default=20]", type=int, default=20)
-    parser.add_argument("-s", "--test_data_size", help="how much data should be used as test data?[default=0.2]", type=float, default=0.2)
-    parser.add_argument("-gpu","--use_GPU", help="if you're able to use a GPU, select this option and the program will run much quicker", action="store_true", default=False)
-    parser.add_argument("-g","--nb_gpus", help="the number of gpus used in this run(if -gpu or --use_gpu is selected)[default=8]", type=int, default=8)
+    parser.add_argument("-v", "--version", help="Display current version of the program and exit", action="version", version="Version 1.0")
+    parser.add_argument("-b","--batch_size", help="Number of samples used per iteration to train the model[default=100]", type=int, default=100, choices=range(1, image_amount))
+    parser.add_argument("-a","--nb_classes", help="Total number of classes the test data has[default=15]", type=int, default=15, choices=(1, 100))
+    parser.add_argument("-e","--nb_epochs", help="the number of complete passes through the dataset[default=20]", type=int, default=20)
+    parser.add_argument("-s", "--test_data_size", help="what percentage of train data should be used as test data?[default=0.2]", type=float, default=0.2, choices=range(0, 1))
+    parser.add_argument("-gpu","--use_GPU", help="Enable the use of a GPU to accelerate the process(if a NVIDIA gpu is installed on the device)", action="store_true", default=False)
+    parser.add_argument("-g","--nb_gpus", help="the number of gpus used in this run(if -gpu/--use_gpu is selected)[default=8]", type=int, default=8)
     parser.add_argument("-r","--img_rows", help="each image will be, unless already, trimmed to this number of rows[default=256]", type=int, default=256)
     parser.add_argument("-c","--img_collums", help="each image will be, unless already, trimmed to this number of collums[default=256]", type=int, default=256)
-    parser.add_argument("-d","--channels", help="Specify if the image is grayscale (1) or RGB (3)[default=1]", type=int, choices=[1,2,3], default=1)
-    parser.add_argument("-f","--nb_filters", help="the total number of filters[default=32]", type=int, default=32)
-    parser.add_argument("-k","--kernel_size", help="initial size of the kernel[default=(2 2)]", type=tuple, nargs=2, default=(2, 2))
+    parser.add_argument("-d","--channels", help="Specify if the image is grayscale (1) or RGB (3)[default=1]", type=int, choices=[1,3], default=1)
+    parser.add_argument("-f","--nb_filters", help="The number of kernels used to convolve the images.\nThe amount of filters increases twice exponentionally. For example: 32, 64, 128.[default=32]", type=int, default=32)
+    parser.add_argument("-k","--kernel_size", help="Specify the height and width of the convolutional window[default=(2 2)], enter as: 2 2", type=ast.literal_eval, nargs=2, default=(2, 2))
     arguments = parser.parse_args()
     return arguments
 
@@ -67,9 +68,15 @@ def import_data():
     Labels contains per image a label noting what the disease is.
     Returns a numpy array of images containing the disease and the associated labels. 
     """
-
-    disease_X_images = np.load("data/X_sample.npy")
-    labels = pd.read_csv("data/sample_labels.csv")
+    try:
+        disease_X_images = np.load("data/X_sample.npy")
+        labels = pd.read_csv("data/sample_labels.csv")
+    except FileNotFoundError:
+        print("the file\"X_sample.npy\" or \"sample_labels.csv\", was not found.\nMake sure that the script is located in the following directory:\n script\n-data\n--X_sample.npy\n--sample_labels.csv")
+    except IOError:
+        print("Something went wrong while reading in the files.\nAre the files corrupted? Are the files in the right format(.csv and .npy)?\nFix the issue before continueing")
+    except:
+        print("Something went wrong while reading in the files.\nCheck if the files \"sample_lables.csv\" and the \"X_sample.npy\" files are available")
     return labels, disease_X_images
 
 def encode_labels(labels):
@@ -174,7 +181,7 @@ def transform_categorical_data(disease_y_train_array, disease_y_test_array, nb_c
     print("y_test Shape: ", disease_y_test_matrix.shape)
     return disease_y_train_matrix, disease_y_test_matrix
 
-def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch, batch_size, nb_classes, nb_gpus, input_shape):
+def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch, batch_size, nb_gpus, use_GPU, input_shape):
     """
     create the model existing of 3 layers. Firstly create a model that convolves the images(3 times),
     then apply flatten and dropout layers to prevent overfitting,
@@ -187,18 +194,19 @@ def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kerne
         channels: Specify if the image is grayscale (1) or RGB (3)
         nb_epoch: Number of epochs
         batch_size: Batch size for the model
-        nb_classes: Number of classes for classification
         nb_gpus:  number of GPUs or list of GPU IDs on which to create model replicas
+        use_GPU: boolean. True means GPU should be used, False means GPU should/cannot be used.
         input_shape: tuple with the input shape of the images
     output:
          model: a fitted CNN model 
     """
     model = get_model()
     model = add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size)
-    model = add_convolving_layers_to_model(model, input_shape, nb_filters=64, kernel_size=(4, 4))
-    model = add_convolving_layers_to_model(model, input_shape, nb_filters=128, kernel_size=(8, 8))
+    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*2, kernel_size=[i * 2 for i in kernel_size])#(4, 4))
+    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*4, kernel_size=[i * 4 for i in kernel_size])#(8, 8))
     model = flatten_and_add_dropout_layers_to_model(model)
-    model = compile_model(model, nb_gpus)
+    model = compile_model(model, nb_gpus, use_GPU)
+    print(model.summary())
     model = train_model(model, disease_X_train_normalized_array, disease_y_train_matrix, nb_epoch, batch_size)
     return model
 
@@ -264,21 +272,22 @@ def flatten_and_add_dropout_layers_to_model(model):
     model.add(Activation('softmax'))
     return model
 
-def compile_model(model, nb_gpus):
+def compile_model(model, nb_gpus, use_GPU):
     """
     compile the model to use multiple GPU's.
     input:
-         model: a sequential CNN model
-         nb_gpus:  number of GPUs or list of GPU IDs on which to create model replicas
+         model  : a sequential CNN model
+         nb_gpus: number of GPUs or list of GPU IDs on which to create model replicas
+         use_GPU: boolean. True means GPU should be used, False means GPU should/cannot be used.
     output:    
          model: a sequential CNN model
     """
-    model = multi_gpu_model(model, gpus=nb_gpus)
+    if use_GPU == True:
+        model = multi_gpu_model(model, gpus=nb_gpus)
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
 
-    print(model.summary())
     return model
 
 def train_model(model, disease_X_train_normalized_array, disease_y_train_matrix, nb_epoch, batch_size):
@@ -330,7 +339,7 @@ def test_model(model, disease_X_test_normalized_array, disease_y_test_matrix):
 
 def calculate_results(disease_y_test_matrix, disease_y_prediction):
     """
-    calculate the precision, recall and f1 of the disease_y data.
+    calculate the precision, recall and f1 using the test data, aka: disease_y data.
     input:
          disease_y_test_matrix: a matrix with the test data
          disease_y_prediction : NumPy array with the test/prediction of the model
