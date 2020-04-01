@@ -18,26 +18,26 @@ from sklearn.preprocessing import LabelEncoder
 def main():
     labels, disease_X_images = import_data()
     fitted_labels = encode_labels(labels)
-    arguments = get_user_arguments(image_amount=len(disease_X_images))
+    arguments = get_user_arguments()
     """
     default arguments are:batch_size=100, channels=1, img_collums=256, img_rows=256, kernel_size=(2, 2),
     nb_classes=15, nb_epochs=20, nb_filters=32, nb_gpus=8, test_data_size=0.2, use_GPU=False.
     """
     
-    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, arguments.test_data_size)
-    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, arguments.img_rows, arguments.img_collums, arguments.channels)
+    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, float(arguments.test_data_size))
+    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, int(arguments.img_rows), int(arguments.img_collums), int(arguments.channels))
     disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array)
-    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array, arguments.nb_classes)
+    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array, int(arguments.nb_classes))
 
-    input_shape = get_input_shape(arguments.img_rows, arguments.img_collums, arguments.channels)
-    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, arguments.nb_filters, arguments.channels,
-                         arguments.nb_epoch, arguments.batch_size, arguments.nb_gpus, arguments.use_GPU, input_shape)
+    input_shape = get_input_shape(int(arguments.img_rows), int(arguments.img_collums), int(arguments.channels))
+    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, int(arguments.nb_filters), int(arguments.channels),
+                         int(arguments.nb_epoch), int(arguments.batch_size), int(arguments.nb_gpus), arguments.use_GPU, input_shape)
 
     disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
     precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
     print_results(precision, recall, f1)
     
-def get_user_arguments(image_amount):
+def get_user_arguments():
     """
     Initialize a ArgumentParset object and add all the user definable arguments.
     input:
@@ -45,12 +45,13 @@ def get_user_arguments(image_amount):
     output:
          arguments: ArgumentParset object containg the user defined variables or the default values. 
     """
-    parser = argparse.ArgumentParser(description="analyze lung images, the input data is created using another script")
+    parser = argparse.ArgumentParser(description="analyze lung images, the input data is created using another script",
+                                     epilog="Example query:\npython3 image_analysis_code.py -b 100 -a 15 -e 20 -s 0.2 -r 256 -c 256 -d 1 -f 32 -k 2 2")
     parser.add_argument("-v", "--version", help="Display current version of the program and exit", action="version", version="Version 1.0")
-    parser.add_argument("-b","--batch_size", help="Number of samples used per iteration to train the model[default=100]", type=int, default=100, choices=range(1, image_amount))
-    parser.add_argument("-a","--nb_classes", help="Total number of classes the test data has[default=15]", type=int, default=15, choices=(1, 100))
+    parser.add_argument("-b","--batch_size", help="Number of samples used per iteration to train the model[default=100]", type=int, default=100)
+    parser.add_argument("-a","--nb_classes", help="Total number of classes the test data has[default=15]", type=int, default=15)
     parser.add_argument("-e","--nb_epochs", help="the number of complete passes through the dataset[default=20]", type=int, default=20)
-    parser.add_argument("-s", "--test_data_size", help="what percentage of train data should be used as test data?[default=0.2]", type=float, default=0.2, choices=range(0, 1))
+    parser.add_argument("-s", "--test_data_size", help="what percentage of train data should be used as test data?[default=0.2]", type=is_test_data_size_valid, default=0.2)
     parser.add_argument("-gpu","--use_GPU", help="Enable the use of a GPU to accelerate the process(if a NVIDIA gpu is installed on the device)", action="store_true", default=False)
     parser.add_argument("-g","--nb_gpus", help="the number of gpus used in this run(if -gpu/--use_gpu is selected)[default=8]", type=int, default=8)
     parser.add_argument("-r","--img_rows", help="each image will be, unless already, trimmed to this number of rows[default=256]", type=int, default=256)
@@ -60,6 +61,13 @@ def get_user_arguments(image_amount):
     parser.add_argument("-k","--kernel_size", help="Specify the height and width of the convolutional window[default=(2 2)], enter as: 2 2", type=ast.literal_eval, nargs=2, default=(2, 2))
     arguments = parser.parse_args()
     return arguments
+
+def is_test_data_size_valid(test_data_size):
+    if float(test_data_size) > 0.0 and float(test_data_size) < 1.0:
+        return test_data_size
+    else:
+        message="The test_data_size is invalid. It should be between 0.0 and 1.0"
+        raise argparse.ArgumentTypeError(message)
 
 def import_data():
     """
