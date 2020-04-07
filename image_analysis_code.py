@@ -31,7 +31,7 @@ def main():
 
     input_shape = get_input_shape(int(arguments.img_rows), int(arguments.img_collums), int(arguments.channels))
     model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, int(arguments.nb_filters), int(arguments.channels),
-                         int(arguments.nb_epochs), int(arguments.batch_size), int(arguments.nb_gpus), arguments.use_GPU, input_shape)
+                         int(arguments.nb_epochs), int(arguments.batch_size), int(arguments.nb_gpus), arguments.use_GPU, input_shape, int(arguments.nb_classes))
 
     disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
     precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
@@ -162,8 +162,8 @@ def normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array
          disease_X_test_normalized_array : NumPy X_disease test array dataset reshaped and normalized
     """
     print("Normalizing Data")
-    disease_X_train_reshaped_array = disease_X_train_reshaped_array.astype('float32')
-    disease_X_test_reshaped_array = disease_X_test_reshaped_array.astype('float32')
+    disease_X_train_normalized_array = disease_X_train_reshaped_array.astype('float32')
+    disease_X_test_normalized_array = disease_X_test_reshaped_array.astype('float32')
 
     disease_X_train_normalized_array /= 255
     disease_X_test_normalized_array /= 255
@@ -189,7 +189,8 @@ def transform_categorical_data(disease_y_train_array, disease_y_test_array, nb_c
     print("y_test Shape: ", disease_y_test_matrix.shape)
     return disease_y_train_matrix, disease_y_test_matrix
 
-def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch, batch_size, nb_gpus, use_GPU, input_shape):
+def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch,
+                 batch_size, nb_gpus, use_GPU, input_shape, nb_classes):
     """
     create the model existing of 3 layers. Firstly create a model that convolves the images(3 times),
     then apply flatten and dropout layers to prevent overfitting,
@@ -212,7 +213,7 @@ def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kerne
     model = add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size)
     model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*2, kernel_size=[i * 2 for i in kernel_size])#default should change to:(4, 4))
     model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*4, kernel_size=[i * 4 for i in kernel_size])#default should change to:(8, 8))
-    model = flatten_and_add_dropout_layers_to_model(model)
+    model = flatten_and_add_dropout_layers_to_model(model, nb_classes)
     model = compile_model(model, nb_gpus, use_GPU)
     print(model.summary())
     model = train_model(model, disease_X_train_normalized_array, disease_y_train_matrix, nb_epoch, batch_size)
@@ -231,7 +232,8 @@ def get_model():
 
 def add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size):
     """
-    Add to the model convolving and ReLU layers.
+    Add to the model convolving and ReLU layers.AttributeError: 'Sequential' object has no attribute '_get_distribution_strategy'
+
     First set of three layers
     input:
          model      : a Sequential model
@@ -257,7 +259,7 @@ def add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size):
     model.add(MaxPooling2D(pool_size=(2, 2)))
     return model
 
-def flatten_and_add_dropout_layers_to_model(model):
+def flatten_and_add_dropout_layers_to_model(model, nb_classes):
     """
     Flatten and add dropout layers to the model.
     input:
