@@ -31,7 +31,7 @@ def main():
 
     input_shape = get_input_shape(int(arguments.img_rows), int(arguments.img_collums), int(arguments.channels))
     model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, int(arguments.nb_filters), int(arguments.channels),
-                         int(arguments.nb_epoch), int(arguments.batch_size), int(arguments.nb_gpus), arguments.use_GPU, input_shape)
+                         int(arguments.nb_epochs), int(arguments.batch_size), int(arguments.nb_gpus), arguments.use_GPU, input_shape)
 
     disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
     precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
@@ -356,9 +356,9 @@ def calculate_results(disease_y_test_matrix, disease_y_prediction):
          recall   : the recall of the model
          f1       : the f1 score of the model
     """
-    precision = precision_score(y_test, y_pred, average='weighted')
-    recall = recall_score(y_test, y_pred, average='weighted')
-    f1 = f1_score(y_test, y_pred, average="weighted")
+    precision = precision_score(disease_y_test_matrix, disease_y_prediction, average='weighted')
+    recall = recall_score(disease_y_test_matrix, disease_y_prediction, average='weighted')
+    f1 = f1_score(disease_y_test_matrix, disease_y_prediction, average="weighted")
     return precision, recall, f1
 
 def print_results(precision, recall, f1):
