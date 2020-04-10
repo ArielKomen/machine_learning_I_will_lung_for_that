@@ -2,13 +2,10 @@
 
 Authors:
 
--Cas van Rijbroek
-
--Lex Bosch
-
--Ariël Komen
-
--Anton Ligterink
+- Cas van Rijbroek
+- Lex Bosch
+- Ariël Komen
+- Anton Ligterink
 
 DISCLAIMER: most of the code in this repo has been extracted from https://github.com/gregwchase/nih-chest-xray. We modified the main CNN model file to accept command line arguments to make it suitable for grid computing.
 
