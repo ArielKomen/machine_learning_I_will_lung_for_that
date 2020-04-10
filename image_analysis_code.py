@@ -1,4 +1,4 @@
-#image analysis eind opdracht code 
+# image analysis eind opdracht code
 import numpy as np
 import pandas as pd
 import argparse
@@ -10,10 +10,17 @@ from keras.layers import MaxPooling2D
 from keras.layers.convolutional import Conv2D
 from keras.models import Sequential
 from keras.utils import np_utils
-from keras.utils import multi_gpu_model
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+
+import time
+import os
+
+import tensorflow as tf
+
+
+
 
 def main():
     labels, disease_X_images = import_data()
@@ -23,84 +30,121 @@ def main():
     default arguments are:batch_size=100, channels=1, img_collums=256, img_rows=256, kernel_size=(2, 2),
     nb_classes=15, nb_epochs=20, nb_filters=32, nb_gpus=8, test_data_size=0.2, use_GPU=False.
     """
-    
-    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(disease_X_images, fitted_labels, float(arguments.test_data_size))
-    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array, disease_X_test_array, int(arguments.img_rows), int(arguments.img_collums), int(arguments.channels))
-    disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array)
-    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array, disease_y_test_array, int(arguments.nb_classes))
+
+    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = split_data(
+        disease_X_images, fitted_labels, float(arguments.test_data_size))
+    disease_X_train_reshaped_array, disease_X_test_reshaped_array = reshape_data(disease_X_train_array,
+                                                                                 disease_X_test_array,
+                                                                                 int(arguments.img_rows),
+                                                                                 int(arguments.img_collums),
+                                                                                 int(arguments.channels))
+    disease_X_train_normalized_array, disease_X_test_normalized_array = normalize_data(disease_X_train_reshaped_array,
+                                                                                       disease_X_test_reshaped_array)
+    disease_y_train_matrix, disease_y_test_matrix = transform_categorical_data(disease_y_train_array,
+                                                                               disease_y_test_array,
+                                                                               int(arguments.nb_classes))
 
     input_shape = get_input_shape(int(arguments.img_rows), int(arguments.img_collums), int(arguments.channels))
-    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size, int(arguments.nb_filters), int(arguments.channels),
-                         int(arguments.nb_epochs), int(arguments.batch_size), int(arguments.nb_gpus), arguments.use_GPU, input_shape, int(arguments.nb_classes))
+    model = create_model(disease_X_train_normalized_array, disease_y_train_matrix, arguments.kernel_size,
+                         int(arguments.nb_filters), int(arguments.channels),
+                         int(arguments.nb_epochs), int(arguments.batch_size), int(arguments.nb_gpus), arguments.use_GPU,
+                         input_shape)
 
-    disease_y_prediction = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix) 
-    precision, recall, f1 = calculate_results(disease_y_test_matrix, disease_y_prediction)
+    test, predict = test_model(model, disease_X_test_normalized_array, disease_y_test_matrix)
+    precision, recall, f1 = calculate_results(test, predict)
     print_results(precision, recall, f1)
-    
+
+
 def get_user_arguments():
     """
     Initialize a ArgumentParset object and add all the user definable arguments.
     input:
-         image_amount: int, the total amount of images 
+         image_amount: int, the total amount of images
     output:
-         arguments: ArgumentParset object containg the user defined variables or the default values. 
+         arguments: ArgumentParset object containg the user defined variables or the default values.
     """
     parser = argparse.ArgumentParser(description="analyze lung images, the input data is created using another script",
                                      epilog="Example query:\npython3 image_analysis_code.py -b 100 -a 15 -e 20 -s 0.2 -r 256 -c 256 -d 1 -f 32 -k 2 2")
-    parser.add_argument("-v", "--version", help="Display current version of the program and exit", action="version", version="Version 1.0")
-    parser.add_argument("-b","--batch_size", help="Number of samples used per iteration to train the model[default=100]", type=int, default=100)
-    parser.add_argument("-a","--nb_classes", help="Total number of classes the test data has[default=15]", type=int, default=15)
-    parser.add_argument("-e","--nb_epochs", help="the number of complete passes through the dataset[default=20]", type=int, default=20)
-    parser.add_argument("-s", "--test_data_size", help="what percentage of train data should be used as test data?[default=0.2]", type=is_test_data_size_valid, default=0.2)
-    parser.add_argument("-gpu","--use_GPU", help="Enable the use of a GPU to accelerate the process(if a NVIDIA gpu is installed on the device)", action="store_true", default=False)
-    parser.add_argument("-g","--nb_gpus", help="the number of gpus used in this run(if -gpu/--use_gpu is selected)[default=8]", type=int, default=8)
-    parser.add_argument("-r","--img_rows", help="each image will be, unless already, trimmed to this number of rows[default=256]", type=int, default=256)
-    parser.add_argument("-c","--img_collums", help="each image will be, unless already, trimmed to this number of collums[default=256]", type=int, default=256)
-    parser.add_argument("-d","--channels", help="Specify if the image is grayscale (1) or RGB (3)[default=1]", type=int, choices=[1,3], default=1)
-    parser.add_argument("-f","--nb_filters", help="The number of kernels used to convolve the images.\nThe amount of filters increases twice exponentionally. For example: 32, 64, 128.[default=32]", type=int, default=32)
-    parser.add_argument("-k","--kernel_size", help="Specify the height and width of the convolutional window[default=(2 2)], enter as: 2 2", type=ast.literal_eval, nargs=2, default=(2, 2))
+    parser.add_argument("-v", "--version", help="Display current version of the program and exit", action="version",
+                        version="Version 1.0")
+    parser.add_argument("-b", "--batch_size",
+                        help="Number of samples used per iteration to train the model[default=100]", type=int,
+                        default=100)
+    parser.add_argument("-a", "--nb_classes", help="Total number of classes the test data has[default=15]", type=int,
+                        default=15)
+    parser.add_argument("-e", "--nb_epochs", help="the number of complete passes through the dataset[default=20]",
+                        type=int, default=5)
+    parser.add_argument("-s", "--test_data_size",
+                        help="what percentage of train data should be used as test data?[default=0.2]",
+                        type=is_test_data_size_valid, default=0.2)
+    parser.add_argument("-gpu", "--use_GPU",
+                        help="Enable the use of a GPU to accelerate the process(if a NVIDIA gpu is installed on the device)",
+                        action="store_true", default=False)
+    parser.add_argument("-g", "--nb_gpus",
+                        help="the number of gpus used in this run(if -gpu/--use_gpu is selected)[default=8]", type=int,
+                        default=8)
+    parser.add_argument("-r", "--img_rows",
+                        help="each image will be, unless already, trimmed to this number of rows[default=256]",
+                        type=int, default=128)
+    parser.add_argument("-c", "--img_collums",
+                        help="each image will be, unless already, trimmed to this number of collums[default=256]",
+                        type=int, default=128)
+    parser.add_argument("-d", "--channels", help="Specify if the image is grayscale (1) or RGB (3)[default=1]",
+                        type=int, choices=[1, 3], default=1)
+    parser.add_argument("-f", "--nb_filters",
+                        help="The number of kernels used to convolve the images.\nThe amount of filters increases twice exponentionally. For example: 32, 64, 128.[default=32]",
+                        type=int, default=32)
+    parser.add_argument("-k", "--kernel_size",
+                        help="Specify the height and width of the convolutional window[default=(2 2)], enter as: 2 2",
+                        type=ast.literal_eval, nargs=2, default=(2, 2))
     arguments = parser.parse_args()
     return arguments
+
 
 def is_test_data_size_valid(test_data_size):
     if float(test_data_size) > 0.0 and float(test_data_size) < 1.0:
         return test_data_size
     else:
-        message="The test_data_size is invalid. It should be between 0.0 and 1.0"
+        message = "The test_data_size is invalid. It should be between 0.0 and 1.0"
         raise argparse.ArgumentTypeError(message)
+
 
 def import_data():
     """
     import the data.
     Disease_X_images contains the images for disease X.
     Labels contains per image a label noting what the disease is.
-    Returns a numpy array of images containing the disease and the associated labels. 
+    Returns a numpy array of images containing the disease and the associated labels.
     """
     try:
-        disease_X_images = np.load("data/X_sample.npy")
-        labels = pd.read_csv("data/sample_labels.csv")
+        disease_X_images = np.load("data/X_sample_128.npy")
+        plz_labels = pd.read_csv("data/sample_labels.csv")
     except FileNotFoundError:
-        print("the file\"X_sample.npy\" or \"sample_labels.csv\", was not found.\nMake sure that the script is located in the following directory:\n script\n-data\n--X_sample.npy\n--sample_labels.csv")
+        print(
+            "the file\"X_sample.npy\" or \"sample_labels.csv\", was not found.\nMake sure that the script is located in the following directory:\n script\n-data\n--X_sample.npy\n--sample_labels.csv")
     except IOError:
-        print("Something went wrong while reading in the files.\nAre the files corrupted? Are the files in the right format(.csv and .npy)?\nFix the issue before continueing")
+        print(
+            "Something went wrong while reading in the files.\nAre the files corrupted? Are the files in the right format(.csv and .npy)?\nFix the issue before continueing")
     except:
-        print("Something went wrong while reading in the files.\nCheck if the files \"sample_lables.csv\" and the \"X_sample.npy\" files are available")
-    return labels, disease_X_images
+        print(
+            "Something went wrong while reading in the files.\nCheck if the files \"sample_lables.csv\" and the \"X_sample.npy\" files are available")
+    return plz_labels, disease_X_images
 
-def encode_labels(labels):
+
+def encode_labels(plz2_labels):
     """
     Transform the labels(text) into numbers. For example: ["aap", "aap", "vis", "banaan"] = [0, 0, 1, 2]
     input:
          labels: panda series
     output:
-        fitted labels, see example above. 
+        fitted labels, see example above.
     """
-    fitted_labels = labels.Finding_Labels
-    # fitted_labels = np.array(pd.get_dummies(fitted_labels))
+    fitted_labels = plz2_labels.Finding_Labels
     label_encoder = LabelEncoder()
     fitted_labels = label_encoder.fit_transform(fitted_labels)
     fitted_labels = fitted_labels.reshape(-1, 1)
     return fitted_labels
+
 
 def split_data(disease_X_images, fitted_labels, test_data_size=0.2):
     """
@@ -113,8 +157,10 @@ def split_data(disease_X_images, fitted_labels, test_data_size=0.2):
         Four arrays: disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array
     """
     print("Splitting data into test/ train datasets")
-    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = train_test_split(disease_X_images, fitted_labels, test_size=test_data_size)
+    disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array = train_test_split(
+        disease_X_images, fitted_labels, test_size=test_data_size)
     return disease_X_train_array, disease_X_test_array, disease_y_train_array, disease_y_test_array
+
 
 def reshape_data(disease_X_train_array, disease_X_test_array, img_rows, img_cols, channels):
     """
@@ -130,14 +176,16 @@ def reshape_data(disease_X_train_array, disease_X_test_array, img_rows, img_cols
           disease_X_test_reshaped_array
     """
     print("Reshaping Data")
-    disease_X_train_reshaped_array = disease_X_train_array.reshape(disease_X_train_array.shape[0], img_rows, img_cols, channels)
-    disease_X_test_reshaped_array = disease_X_test_array.reshape(disease_X_test_array.shape[0], img_rows, img_cols, channels)
+    disease_X_train_reshaped_array = disease_X_train_array.reshape(disease_X_train_array.shape[0], img_rows, img_cols,
+                                                                   channels)
+    disease_X_test_reshaped_array = disease_X_test_array.reshape(disease_X_test_array.shape[0], img_rows, img_cols,
+                                                                 channels)
 
     print("X_train Shape: ", disease_X_train_reshaped_array.shape)
     print("X_test Shape: ", disease_X_test_reshaped_array.shape)
     return disease_X_train_reshaped_array, disease_X_test_reshaped_array
 
-    
+
 def get_input_shape(img_rows, img_cols, channels):
     """
     get the input shape.
@@ -146,10 +194,11 @@ def get_input_shape(img_rows, img_cols, channels):
          img_cols: the amount of collums the images have
          channels: specify if the image is grayscale (1) or RGB (3)
     output:
-         input_shape: a tuple denoting the input shape of all images 
+         input_shape: a tuple denoting the input shape of all images
     """
     input_shape = (img_rows, img_cols, channels)
     return input_shape
+
 
 def normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array):
     """
@@ -170,6 +219,7 @@ def normalize_data(disease_X_train_reshaped_array, disease_X_test_reshaped_array
 
     return disease_X_train_normalized_array, disease_X_test_normalized_array
 
+
 def transform_categorical_data(disease_y_train_array, disease_y_test_array, nb_classes):
     """
     transform the Y_disease NumPy array dataset into a one-hot-encoding matrix.
@@ -184,17 +234,18 @@ def transform_categorical_data(disease_y_train_array, disease_y_test_array, nb_c
     """
     disease_y_train_matrix = np_utils.to_categorical(disease_y_train_array, nb_classes)
     disease_y_test_matrix = np_utils.to_categorical(disease_y_test_array, nb_classes)
-    
+
     print("y_train Shape: ", disease_y_train_matrix.shape)
     print("y_test Shape: ", disease_y_test_matrix.shape)
     return disease_y_train_matrix, disease_y_test_matrix
 
-def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch,
-                 batch_size, nb_gpus, use_GPU, input_shape, nb_classes):
+
+def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kernel_size, nb_filters, channels, nb_epoch: 10,
+                 batch_size, nb_gpus, use_GPU, input_shape):
     """
     create the model existing of 3 layers. Firstly create a model that convolves the images(3 times),
     then apply flatten and dropout layers to prevent overfitting,
-    compile the model and lastly train the model using the early predefined layers. 
+    compile the model and lastly train the model using the early predefined layers.
     input:
         disease_X_train_normalized_array: Array of NumPy arrays
         disease_y_train_matrix: Array of labels
@@ -207,17 +258,20 @@ def create_model(disease_X_train_normalized_array, disease_y_train_matrix, kerne
         use_GPU: boolean. True means GPU should be used, False means GPU should/cannot be used.
         input_shape: tuple with the input shape of the images
     output:
-         model: a fitted CNN model 
+         model: a fitted CNN model
     """
     model = get_model()
     model = add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size)
-    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*2, kernel_size=[i * 2 for i in kernel_size])#default should change to:(4, 4))
-    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters*4, kernel_size=[i * 4 for i in kernel_size])#default should change to:(8, 8))
-    model = flatten_and_add_dropout_layers_to_model(model, nb_classes)
+    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters * 2,
+                                           kernel_size=[i * 2 for i in kernel_size])  # default should change to:(4, 4))
+    model = add_convolving_layers_to_model(model, input_shape, nb_filters=nb_filters * 4,
+                                           kernel_size=[i * 4 for i in kernel_size])  # default should change to:(8, 8))
+    model = flatten_and_add_dropout_layers_to_model(model)
     model = compile_model(model, nb_gpus, use_GPU)
     print(model.summary())
     model = train_model(model, disease_X_train_normalized_array, disease_y_train_matrix, nb_epoch, batch_size)
     return model
+
 
 def get_model():
     """
@@ -225,25 +279,25 @@ def get_model():
     input:
          -
     output:
-         model: a initialized Sequential model. 
+         model: a initialized Sequential model.
     """
     model = Sequential()
     return model
 
+
 def add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size):
     """
-    Add to the model convolving and ReLU layers.AttributeError: 'Sequential' object has no attribute '_get_distribution_strategy'
-
+    Add to the model convolving and ReLU layers.
     First set of three layers
     input:
          model      : a Sequential model
-         nb_filters : total amount of filters. 
+         nb_filters : total amount of filters.
          kernel_size: initial size of the kernel
          input_shape: the input shape the images have
     output:
          model: A sequential CNN model.
     """
-    
+
     model.add(Conv2D(nb_filters, (kernel_size[0], kernel_size[1]),
                      padding='valid',
                      strides=1,
@@ -259,13 +313,14 @@ def add_convolving_layers_to_model(model, input_shape, nb_filters, kernel_size):
     model.add(MaxPooling2D(pool_size=(2, 2)))
     return model
 
-def flatten_and_add_dropout_layers_to_model(model, nb_classes):
+
+def flatten_and_add_dropout_layers_to_model(model):
     """
     Flatten and add dropout layers to the model.
     input:
          model: a sequential CNN model
     output:
-         model: a sequential CNN model 
+         model: a sequential CNN model
     """
     model.add(Flatten())
     print("Model flattened out to: ", model.output_shape)
@@ -278,9 +333,10 @@ def flatten_and_add_dropout_layers_to_model(model, nb_classes):
     model.add(Activation("relu"))
     model.add(Dropout(0.2))
 
-    model.add(Dense(nb_classes))
+    model.add(Dense(15))
     model.add(Activation('softmax'))
     return model
+
 
 def compile_model(model, nb_gpus, use_GPU):
     """
@@ -289,16 +345,26 @@ def compile_model(model, nb_gpus, use_GPU):
          model  : a sequential CNN model
          nb_gpus: number of GPUs or list of GPU IDs on which to create model replicas
          use_GPU: boolean. True means GPU should be used, False means GPU should/cannot be used.
-    output:    
+    output:
          model: a sequential CNN model
     """
     if use_GPU == True:
-        model = multi_gpu_model(model, gpus=nb_gpus)
+        config = tf.compat.v1.ConfigProto(gpu_options=
+                                          tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.8)
+                                          )
+        config.gpu_options.allow_growth = True
+        session = tf.compat.v1.Session(config=config)
+        tf.compat.v1.keras.backend.set_session(session)
+
+    else:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
 
     return model
+
 
 def train_model(model, disease_X_train_normalized_array, disease_y_train_matrix, nb_epoch, batch_size):
     """
@@ -308,7 +374,7 @@ def train_model(model, disease_X_train_normalized_array, disease_y_train_matrix,
          disease_X_train_normalized_array: NumPy array of normalized X_disease train dataset
          disease_y_train_matrix          : matrix of categorical y_disease data
          nb_epoch                        : Number of epochs
-         batch_size                      : batch size for the model 
+         batch_size                      : batch size for the model
     output:
          model: a trained sequential CNN model
     """
@@ -328,6 +394,7 @@ def train_model(model, disease_X_train_normalized_array, disease_y_train_matrix,
               )
     return model
 
+
 def test_model(model, disease_X_test_normalized_array, disease_y_test_matrix):
     """
     Test the model.
@@ -344,10 +411,10 @@ def test_model(model, disease_X_test_normalized_array, disease_y_test_matrix):
 
     disease_y_test_matrix = np.argmax(disease_y_test_matrix, axis=1)
     disease_y_prediction = np.argmax(disease_y_prediction, axis=1)
-    return disease_y_prediction
+    return disease_y_test_matrix, disease_y_prediction
 
 
-def calculate_results(disease_y_test_matrix, disease_y_prediction):
+def calculate_results(y_test, y_pred):
     """
     calculate the precision, recall and f1 using the test data, aka: disease_y data.
     input:
@@ -358,10 +425,13 @@ def calculate_results(disease_y_test_matrix, disease_y_prediction):
          recall   : the recall of the model
          f1       : the f1 score of the model
     """
-    precision = precision_score(disease_y_test_matrix, disease_y_prediction, average='weighted')
-    recall = recall_score(disease_y_test_matrix, disease_y_prediction, average='weighted')
-    f1 = f1_score(disease_y_test_matrix, disease_y_prediction, average="weighted")
+
+
+    precision = precision_score(y_test, y_pred, average='weighted')
+    recall = recall_score(y_test, y_pred, average='weighted')
+    f1 = f1_score(y_test, y_pred, average="weighted")
     return precision, recall, f1
+
 
 def print_results(precision, recall, f1):
     """
@@ -376,5 +446,6 @@ def print_results(precision, recall, f1):
     print("F1: ", f1)
 
 
-
+timestart = time.time()
 main()
+print("Total time taken: ",str(round((time.time() - timestart)/60)))
