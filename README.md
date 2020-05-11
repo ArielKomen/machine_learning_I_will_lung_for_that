@@ -1,10 +1,14 @@
-<h2>I lung for data</h2>
-This is also a repo to deposit code for the _image analysis_ final assignment.
+<h2>Image analysis project</h2>
 
-improve code
-- [x] add user input, translates to: implement argparser @Ariel
-- [x] add exception handeling on basis of user input @Ariel, there is one variable that I don't know how to handle. But that is something to handle in the future
-- [ ] make it possible to run the program using the gpu @Cas
-- [ ] write the report @Anton (translates to: write introduction, we will do results & discussion &  conclusion as a group)
-- [ ] the thing @Lex(ecutioner) is doing 
+Authors:
 
+- Cas van Rijbroek
+- Lex Bosch
+- Ariël Komen
+- Anton Ligterink
+
+DISCLAIMER: most of the code in this repo has been extracted from https://github.com/gregwchase/nih-chest-xray. We modified the main CNN model file to accept command line arguments to make it suitable for grid computing.
+
+X-ray images were cropped and converted to numpy arrays using the files in this directory. In addition to this, the labels of the images were reduced from 709 to 15 categories. Irrelivant columns and patients with ages not represented in years were also removed (this methodoligy is identical to the one used by the researchers who publicised the original repository).
+
+All python code used in our analysis is present in this repository.
