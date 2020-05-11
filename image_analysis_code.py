@@ -81,10 +81,13 @@ def import_data():
         labels = pd.read_csv("data/sample_labels.csv")
     except FileNotFoundError:
         print("the file\"X_sample.npy\" or \"sample_labels.csv\", was not found.\nMake sure that the script is located in the following directory:\n script\n-data\n--X_sample.npy\n--sample_labels.csv")
+        return
     except IOError:
         print("Something went wrong while reading in the files.\nAre the files corrupted? Are the files in the right format(.csv and .npy)?\nFix the issue before continueing")
+        return
     except:
         print("Something went wrong while reading in the files.\nCheck if the files \"sample_lables.csv\" and the \"X_sample.npy\" files are available")
+        return
     return labels, disease_X_images
 
 def encode_labels(labels):
@@ -130,6 +133,9 @@ def reshape_data(disease_X_train_array, disease_X_test_array, img_rows, img_cols
           disease_X_test_reshaped_array
     """
     print("Reshaping Data")
+    print(disease_X_train_array.shape[0])
+    print(disease_X_test_array.shape[0])
+    
     disease_X_train_reshaped_array = disease_X_train_array.reshape(disease_X_train_array.shape[0], img_rows, img_cols, channels)
     disease_X_test_reshaped_array = disease_X_test_array.reshape(disease_X_test_array.shape[0], img_rows, img_cols, channels)
 
